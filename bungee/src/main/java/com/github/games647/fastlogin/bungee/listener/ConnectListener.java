@@ -111,7 +111,7 @@ public class ConnectListener implements Listener {
         //with the offline uuid this makes it possible to set the skin then
         PendingConnection connection = loginEvent.getConnection();
         if (connection.isOnlineMode()) {
-            LoginSession session = plugin.getSession().get(connection);
+            LoginSession session = plugin.getSessionManager().getLoginSession(connection);
 
             UUID verifiedUUID = connection.getUniqueId();
             String verifiedUsername = connection.getName();
@@ -163,7 +163,7 @@ public class ConnectListener implements Listener {
         ProxiedPlayer player = serverConnectedEvent.getPlayer();
         Server server = serverConnectedEvent.getServer();
 
-        BungeeLoginSession session = plugin.getSession().get(player.getPendingConnection());
+        BungeeLoginSession session = plugin.getSessionManager().getLoginSession(player.getPendingConnection());
         if (session == null) {
             return;
         }
@@ -178,7 +178,7 @@ public class ConnectListener implements Listener {
     @EventHandler
     public void onDisconnect(PlayerDisconnectEvent disconnectEvent) {
         ProxiedPlayer player = disconnectEvent.getPlayer();
-        plugin.getSession().remove(player.getPendingConnection());
+        plugin.getSessionManager().endLoginSession(player.getPendingConnection());
         plugin.getCore().getPendingConfirms().remove(player.getUniqueId());
     }
 

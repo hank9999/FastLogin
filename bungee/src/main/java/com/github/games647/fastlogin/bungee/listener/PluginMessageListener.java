@@ -93,7 +93,7 @@ public class PluginMessageListener implements Listener {
         if (forPlayer.getPendingConnection().isOnlineMode()) {
             //bukkit module successfully received and force logged in the user
             //update only on success to prevent corrupt data
-            BungeeLoginSession loginSession = plugin.getSession().get(forPlayer.getPendingConnection());
+            BungeeLoginSession loginSession = plugin.getSessionManager().getLoginSession(forPlayer.getPendingConnection());
             StoredProfile playerProfile = loginSession.getProfile();
             loginSession.setRegistered(true);
 

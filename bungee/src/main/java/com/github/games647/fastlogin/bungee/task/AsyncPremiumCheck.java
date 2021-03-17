@@ -34,7 +34,7 @@ public class AsyncPremiumCheck extends JoinManagement<ProxiedPlayer, CommandSend
 
     @Override
     public void run() {
-        plugin.getSession().remove(connection);
+        plugin.getSessionManager().endLoginSession(connection);
 
         try {
             super.onLogin(username, new BungeeLoginSource(connection, preLoginEvent));
@@ -54,7 +54,7 @@ public class AsyncPremiumCheck extends JoinManagement<ProxiedPlayer, CommandSend
     public void requestPremiumLogin(BungeeLoginSource source, StoredProfile profile,
                                     String username, boolean registered) {
         source.setOnlineMode();
-        plugin.getSession().put(source.getConnection(), new BungeeLoginSession(username, registered, profile));
+        plugin.getSessionManager().startLoginSession(source.getConnection(), new BungeeLoginSession(username, registered, profile));
 
         String ip = source.getAddress().getAddress().getHostAddress();
         plugin.getCore().getPendingLogin().put(ip + username, new Object());
@@ -62,6 +62,6 @@ public class AsyncPremiumCheck extends JoinManagement<ProxiedPlayer, CommandSend
 
     @Override
     public void startCrackedSession(BungeeLoginSource source, StoredProfile profile, String username) {
-        plugin.getSession().put(source.getConnection(), new BungeeLoginSession(username, false, profile));
+        plugin.getSessionManager().startLoginSession(source.getConnection(), new BungeeLoginSession(username, false, profile));
     }
 }

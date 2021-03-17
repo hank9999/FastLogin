@@ -121,6 +121,10 @@ public class FastLoginBungee extends Plugin implements PlatformPlugin<CommandSen
         receiver.sendMessage(TextComponent.fromLegacyText(message));
     }
 
+    public BungeeSessionManager getSessionManager() {
+        return sessionManager;
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     public ThreadFactory getThreadFactory() {
