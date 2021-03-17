@@ -4,8 +4,9 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
-import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
+import com.github.games647.fastlogin.bukkit.auth.protocollib.packet.OutgoingPacket.Disconnect;
+import com.github.games647.fastlogin.bukkit.auth.protocollib.packet.OutgoingPacket.EncryptionRequest;
 import com.github.games647.fastlogin.core.auth.LoginSource;
 
 import java.lang.reflect.InvocationTargetException;
@@ -15,9 +16,6 @@ import java.util.Arrays;
 import java.util.Random;
 
 import org.bukkit.entity.Player;
-
-import static com.comphenix.protocol.PacketType.Login.Server.DISCONNECT;
-import static com.comphenix.protocol.PacketType.Login.Server.ENCRYPTION_BEGIN;
 
 class ProtocolLibLoginSource implements LoginSource {
 
@@ -40,38 +38,15 @@ class ProtocolLibLoginSource implements LoginSource {
     @Override
     public void setOnlineMode() throws Exception {
         verifyToken = EncryptionUtil.generateVerifyToken(random);
-
-        /*
-         * Packet Information: https://wiki.vg/Protocol#Encryption_Request
-         *
-         * ServerID="" (String) key=public server key verifyToken=random 4 byte array
-         */
-        PacketContainer newPacket = new PacketContainer(ENCRYPTION_BEGIN);
-
-        newPacket.getStrings().write(0, serverId);
-        StructureModifier<PublicKey> keyModifier = newPacket.getSpecificModifier(PublicKey.class);
-        int verifyField = 0;
-        if (keyModifier.getFields().isEmpty()) {
-            // Since 1.16.4 this is now a byte field
-            newPacket.getByteArrays().write(0, publicKey.getEncoded());
-            verifyField++;
-        } else {
-            keyModifier.write(0, publicKey);
-        }
-
-        newPacket.getByteArrays().write(verifyField, verifyToken);
-
-        //serverId is a empty string
-        ProtocolLibrary.getProtocolManager().sendServerPacket(player, newPacket);
+        PacketContainer encryptReq = EncryptionRequest.create().publicKey(publicKey).verifyToken(verifyToken).build();
+        ProtocolLibrary.getProtocolManager().sendServerPacket(player, encryptReq);
     }
 
     @Override
     public void kick(String message) throws InvocationTargetException {
         ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
 
-        PacketContainer kickPacket = new PacketContainer(DISCONNECT);
-        kickPacket.getChatComponents().write(0, WrappedChatComponent.fromText(message));
-
+        PacketContainer kickPacket = Disconnect.create(WrappedChatComponent.fromText(message));
         try {
             //send kick packet at login state
             //the normal event.getPlayer.kickPlayer(String) method does only work at play state

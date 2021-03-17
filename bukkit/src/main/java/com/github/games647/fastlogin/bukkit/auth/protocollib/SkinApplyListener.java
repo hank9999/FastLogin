@@ -1,13 +1,10 @@
 package com.github.games647.fastlogin.bukkit.auth.protocollib;
 
-import com.comphenix.protocol.reflect.accessors.Accessors;
-import com.comphenix.protocol.reflect.accessors.MethodAccessor;
-import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.comphenix.protocol.wrappers.WrappedSignedProperty;
 import com.github.games647.craftapi.model.skin.Textures;
-import com.github.games647.fastlogin.bukkit.auth.BukkitLoginSession;
 import com.github.games647.fastlogin.bukkit.FastLoginBukkit;
+import com.github.games647.fastlogin.bukkit.auth.BukkitLoginSession;
 
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -17,9 +14,6 @@ import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
 
 public class SkinApplyListener implements Listener {
-
-    private static final Class<?> GAME_PROFILE = MinecraftReflection.getGameProfileClass();
-    private static final MethodAccessor GET_PROPERTIES = Accessors.getMethodAccessor(GAME_PROFILE, "getProperties");
 
     private final FastLoginBukkit plugin;
 

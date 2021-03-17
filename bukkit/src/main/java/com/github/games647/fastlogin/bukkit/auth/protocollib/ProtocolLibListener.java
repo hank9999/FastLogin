@@ -3,13 +3,15 @@ package com.github.games647.fastlogin.bukkit.auth.protocollib;
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketAdapter;
-import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.events.PacketEvent;
 import com.github.games647.fastlogin.bukkit.FastLoginBukkit;
+import com.github.games647.fastlogin.bukkit.auth.protocollib.packet.IncomingPacket.EncryptionReply;
+import com.github.games647.fastlogin.bukkit.auth.protocollib.packet.IncomingPacket.LoginStart;
 import com.github.games647.fastlogin.core.auth.RateLimiter;
 
 import io.papermc.lib.PaperLib;
 
+import java.net.InetSocketAddress;
 import java.security.KeyPair;
 import java.security.SecureRandom;
 
@@ -77,32 +79,29 @@ public class ProtocolLibListener extends PacketAdapter {
                 return;
             }
 
-            onLogin(packetEvent, sender);
+            LoginStart packet = LoginStart.from(packetEvent.getPacket());
+            onLogin(packetEvent, packet, sender);
         } else if (packetType == ENCRYPTION_BEGIN) {
-            onEncryptionBegin(packetEvent, sender);
+            EncryptionReply packet = EncryptionReply.from(packetEvent.getPacket());
+            onEncryptionBegin(packetEvent, packet, sender);
         }
     }
 
-    private void onEncryptionBegin(PacketEvent packetEvent, Player sender) {
-        byte[] sharedSecret = packetEvent.getPacket().getByteArrays().read(0);
-
+    private void onEncryptionBegin(PacketEvent packetEvent, EncryptionReply packet, Player sender) {
         packetEvent.getAsyncMarker().incrementProcessingDelay();
-        Runnable verifyTask = new VerifyResponseTask(plugin, packetEvent, sender, sharedSecret, keyPair);
+        Runnable verifyTask = new VerifyResponseTask(plugin, packetEvent, sender, packet, keyPair);
         plugin.getScheduler().runAsync(verifyTask);
     }
 
-    private void onLogin(PacketEvent packetEvent, Player player) {
+    private void onLogin(PacketEvent packetEvent, LoginStart packet, Player player) {
         //this includes ip:port. Should be unique for an incoming login request with a timeout of 2 minutes
-        String sessionKey = player.getAddress().toString();
+        InetSocketAddress address = player.getAddress();
 
         //remove old data every time on a new login in order to keep the session only for one person
-        plugin.getSessionManager().endLoginSession(player.getAddress());
+        plugin.getSessionManager().endLoginSession(address);
 
-        //player.getName() won't work at this state
-        PacketContainer packet = packetEvent.getPacket();
-
-        String username = packet.getGameProfiles().read(0).getName();
-        plugin.getLog().trace("GameProfile {} with {} connecting", sessionKey, username);
+        String username = packet.getUsername();
+        plugin.getLog().trace("GameProfile {} with {} connecting", address, username);
 
         packetEvent.getAsyncMarker().incrementProcessingDelay();
         Runnable nameCheckTask = new NameCheckTask(plugin, packetEvent, random, player, username, keyPair.getPublic());

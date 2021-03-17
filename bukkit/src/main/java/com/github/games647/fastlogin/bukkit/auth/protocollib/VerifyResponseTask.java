@@ -8,12 +8,14 @@ import com.comphenix.protocol.reflect.FieldUtils;
 import com.comphenix.protocol.reflect.FuzzyReflection;
 import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.WrappedChatComponent;
-import com.comphenix.protocol.wrappers.WrappedGameProfile;
 import com.github.games647.craftapi.model.auth.Verification;
 import com.github.games647.craftapi.model.skin.SkinProperty;
 import com.github.games647.craftapi.resolver.MojangResolver;
-import com.github.games647.fastlogin.bukkit.auth.BukkitLoginSession;
 import com.github.games647.fastlogin.bukkit.FastLoginBukkit;
+import com.github.games647.fastlogin.bukkit.auth.BukkitLoginSession;
+import com.github.games647.fastlogin.bukkit.auth.protocollib.packet.IncomingPacket.EncryptionReply;
+import com.github.games647.fastlogin.bukkit.auth.protocollib.packet.IncomingPacket.LoginStart;
+import com.github.games647.fastlogin.bukkit.auth.protocollib.packet.OutgoingPacket.Disconnect;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -33,9 +35,6 @@ import javax.crypto.SecretKey;
 
 import org.bukkit.entity.Player;
 
-import static com.comphenix.protocol.PacketType.Login.Client.START;
-import static com.comphenix.protocol.PacketType.Login.Server.DISCONNECT;
-
 public class VerifyResponseTask implements Runnable {
 
     private final FastLoginBukkit plugin;
@@ -44,17 +43,17 @@ public class VerifyResponseTask implements Runnable {
 
     private final Player player;
 
-    private final byte[] sharedSecret;
+    private final EncryptionReply packet;
 
     private static Method encryptMethod;
     private static Method cipherMethod;
 
     protected VerifyResponseTask(FastLoginBukkit plugin, PacketEvent packetEvent, Player player,
-                              byte[] sharedSecret, KeyPair keyPair) {
+                                 EncryptionReply packet, KeyPair keyPair) {
         this.plugin = plugin;
         this.packetEvent = packetEvent;
         this.player = player;
-        this.sharedSecret = Arrays.copyOf(sharedSecret, sharedSecret.length);
+        this.packet = packet;
         this.serverKey = keyPair;
     }
 
@@ -83,7 +82,7 @@ public class VerifyResponseTask implements Runnable {
 
         SecretKey loginKey;
         try {
-            loginKey = EncryptionUtil.decryptSharedKey(privateKey, sharedSecret);
+            loginKey = EncryptionUtil.decryptSharedKey(privateKey, packet.getSharedSecret());
         } catch (GeneralSecurityException securityEx) {
             disconnect("error-kick", false, "Cannot decrypt received contents", securityEx);
             return;
@@ -151,8 +150,7 @@ public class VerifyResponseTask implements Runnable {
 
     private boolean checkVerifyToken(BukkitLoginSession session) throws GeneralSecurityException {
         byte[] requestVerify = session.getVerifyToken();
-        //encrypted verify token
-        byte[] responseVerify = packetEvent.getPacket().getByteArrays().read(1);
+        byte[] responseVerify = packet.getEncryptedVerifyToken();
 
         //https://github.com/bergerkiller/CraftSource/blob/master/net.minecraft.server/LoginListener.java#L182
         if (!Arrays.equals(requestVerify, EncryptionUtil.decrypt(serverKey.getPrivate(), responseVerify))) {
@@ -231,8 +229,7 @@ public class VerifyResponseTask implements Runnable {
     }
 
     private void kickPlayer(String reason) {
-        PacketContainer kickPacket = new PacketContainer(DISCONNECT);
-        kickPacket.getChatComponents().write(0, WrappedChatComponent.fromText(reason));
+        PacketContainer kickPacket = Disconnect.create(WrappedChatComponent.fromText(reason));
         try {
             //send kick packet at login state
             //the normal event.getPlayer.kickPlayer(String) method does only work at play state
@@ -247,11 +244,7 @@ public class VerifyResponseTask implements Runnable {
     //fake a new login packet in order to let the server handle all the other stuff
     private void receiveFakeStartPacket(String username) {
         //see StartPacketListener for packet information
-        PacketContainer startPacket = new PacketContainer(START);
-
-        //uuid is ignored by the packet definition
-        WrappedGameProfile fakeProfile = new WrappedGameProfile(UUID.randomUUID(), username);
-        startPacket.getGameProfiles().write(0, fakeProfile);
+        PacketContainer startPacket = LoginStart.create(username);
         try {
             //we don't want to handle our own packets so ignore filters
             ProtocolLibrary.getProtocolManager().recieveClientPacket(player, startPacket, false);
