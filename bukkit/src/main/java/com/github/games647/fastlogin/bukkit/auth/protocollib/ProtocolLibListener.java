@@ -78,7 +78,7 @@ public class ProtocolLibListener extends PacketAdapter {
             }
 
             onLogin(packetEvent, sender);
-        } else {
+        } else if (packetType == ENCRYPTION_BEGIN) {
             onEncryptionBegin(packetEvent, sender);
         }
     }
