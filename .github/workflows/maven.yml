@@ -9,7 +9,7 @@ name: Java CI
 on:
   push:
     # Only listen to the main branch, otherwise dependabot would trigger the pr and push action at the same time
-    branches: [main]
+    branches: ['**']
   pull_request:
     branches:
       - '**'
