@@ -7,8 +7,12 @@ name: Java CI
 # Build on every push and pull request regardless of the branch
 # Wiki: https://help.github.com/en/actions/reference/events-that-trigger-workflows
 on:
-  - push
-  - pull_request
+  push:
+    # Only listen to the main branch, otherwise dependabot would trigger the pr and push action at the same time
+    branches: [main]
+  pull_request:
+    branches:
+      - '**'
 
 jobs:
   # Job id name
