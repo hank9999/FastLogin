@@ -7,43 +7,50 @@ name: Java CI
 # Build on every push and pull request regardless of the branch
 # Wiki: https://help.github.com/en/actions/reference/events-that-trigger-workflows
 on:
-    - push
-    - pull_request
+  - push
+  - pull_request
 
 jobs:
-  # job id
-  build_and_test:
-
+  # Job id name
+  build:
     # Environment image - always newest OS
     runs-on: ubuntu-latest
 
     # Run steps
     steps:
-    # Pull changes
-    - uses: actions/checkout@v2.3.4
+      # Pull changes
+      - uses: actions/checkout@v2.3.4
 
-    # Cache artifacts - however this has the downside that we don't get notified of
-    # artifact resolution failures like invalid repository
-    # Nevertheless the repositories should be more stable and it makes no sense to pull
-    # a same version every time
-    # A dry run would make more sense
-    - uses: actions/cache@v2.1.4
-      with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-maven-
+      # Cache artifacts - however this has the downside that we don't get notified of
+      # artifact resolution failures like invalid repository
+      # Nevertheless the repositories should be more stable and it makes no sense to pull
+      # a same version every time
+      # A dry run would make more sense
+      - uses: actions/cache@v2.1.4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
 
-    # Setup Java
-    - name: Set up JDK
-      uses: actions/setup-java@v1.4.3
-      with:
-        # Use Java 11, because it's minimum required version
-        java-version: 11
+      # Setup Java
+      - name: Set up JDK
+        uses: actions/setup-java@v1.4.3
+        with:
+          # Use Java 11, because it's minimum required version
+          java-version: 11
 
-    # Build and test (included in package)
-    - name: Build with Maven and test
-    # Run non-interactive, package (with compile+test),
-    # ignore snapshot updates, because they are likely to have breaking changes, enforce checksums to validate
-    # possible errors in dependencies
-      run: mvn test --batch-mode --no-snapshot-updates --strict-checksums --file pom.xml
+      # Build and test (included in package)
+      - name: Build with Maven and test
+        # Run non-interactive, package (with compile+test),
+        # ignore snapshot updates, because they are likely to have breaking changes, enforce checksums to validate
+        # possible errors in dependencies
+        run: mvn package --batch-mode --no-snapshot-updates --strict-checksums --file pom.xml
+
+  test:
+    # dependent jobs
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test project
+        run: mvn test --batch-mode --no-snapshot-updates --strict-checksums --file pom.xml
